@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import HomePage from "./pages/HomePage"
 import LoginPage from "./pages/LoginPage"
 import RegisterPage from "./pages/RegisterPage"
+import DashboardPage from "./pages/DashboardPage" // Importa el nuevo DashboardPage
+import ProtectedRoute from "./components/ProtectedRoute" // Importa ProtectedRoute
 import "./App.css"
 
 function App() {
@@ -11,6 +13,15 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        {/* Ruta protegida para el dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   )

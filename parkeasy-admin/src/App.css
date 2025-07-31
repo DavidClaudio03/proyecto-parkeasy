@@ -578,6 +578,57 @@ html {
   text-decoration: underline;
 }
 
+/* Estilos para validación y mensajes */
+.form-input-web.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.form-input-web.error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.1);
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.server-message {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.server-message.success {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.server-message.error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.auth-button-web:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-button-web:disabled:hover {
+  background-color: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Responsive para formularios web */
 @media (max-width: 640px) {
   .auth-container-web {

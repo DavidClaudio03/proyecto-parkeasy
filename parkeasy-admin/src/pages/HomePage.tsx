@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import logoImage from "../assets/ParkEasyLogo.png"
+import logoImage from "../assets/ParkEasyLogo.png" // Ajusta la extensión según tu archivo (.png, .svg, .jpg, etc.)
 
 // Simple icon components (you can replace with react-icons or lucide-react)
 const CarIcon = () => (
@@ -123,7 +123,9 @@ export default function HomePage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link to="/login" className="btn btn-primary">
+            <Link to="/dashboard" className="btn btn-primary">
+              {" "}
+              {/* Cambiado a /dashboard */}
               <MonitorIcon />
               <span>Panel Administrativo</span>
             </Link>

@@ -2,18 +2,64 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
-import logoImage from "../assets/ParkEasyLogo.png" 
+import { Link, useNavigate } from "react-router-dom"
+import logoImage from "../assets/ParkEasyLogo.png"
+import { authService, ValidationException, type ValidationError } from "../services/authService"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [errors, setErrors] = useState<ValidationError[]>([])
+  const [serverMessage, setServerMessage] = useState("")
+  const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Función para obtener error específico de un campo
+  const getFieldError = (fieldName: string): string => {
+    const error = errors.find((err) => err.field === fieldName)
+    return error ? error.message : ""
+  }
+
+  // Función para limpiar errores
+  const clearErrors = () => {
+    setErrors([])
+    setServerMessage("")
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Register attempt:", { name, email, password })
-    // Aquí implementarías la lógica de registro
+    setIsLoading(true)
+    clearErrors()
+
+    try {
+      const response = await authService.register({
+        nombre: name,
+        email,
+        contraseña: password,
+      })
+
+      // Registro exitoso
+      setServerMessage(response.message)
+      console.log("Registro exitoso:", response)
+
+      // Redirigir al login después de un breve delay
+      setTimeout(() => {
+        navigate("/login")
+      }, 2000)
+    } catch (error) {
+      if (error instanceof ValidationException) {
+        // Errores de validación
+        setErrors(error.errors)
+      } else if (error instanceof Error) {
+        // Errores del servidor o de red
+        setServerMessage(error.message)
+      } else {
+        setServerMessage("Error inesperado. Inténtalo de nuevo.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -29,40 +75,62 @@ export default function RegisterPage() {
           <div className="form-group-web">
             <input
               type="text"
-              className="form-input-web"
+              className={`form-input-web ${getFieldError("nombre") ? "error" : ""}`}
               placeholder="Ingrese su nombre"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value)
+                clearErrors()
+              }}
+              disabled={isLoading}
               required
             />
+            {getFieldError("nombre") && <div className="error-message">{getFieldError("nombre")}</div>}
           </div>
 
           <div className="form-group-web">
             <input
               type="email"
-              className="form-input-web"
+              className={`form-input-web ${getFieldError("email") ? "error" : ""}`}
               placeholder="Ingrese su email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                clearErrors()
+              }}
+              disabled={isLoading}
               required
             />
+            {getFieldError("email") && <div className="error-message">{getFieldError("email")}</div>}
           </div>
 
           <div className="form-group-web">
             <input
               type="password"
-              className="form-input-web"
+              className={`form-input-web ${getFieldError("contraseña") ? "error" : ""}`}
               placeholder="Ingrese su contraseña"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                clearErrors()
+              }}
+              disabled={isLoading}
               required
             />
+            {getFieldError("contraseña") && <div className="error-message">{getFieldError("contraseña")}</div>}
           </div>
 
-          <button type="submit" className="auth-button-web">
-            Registrar
+          <button type="submit" className="auth-button-web" disabled={isLoading}>
+            {isLoading ? "Registrando..." : "Registrar"}
           </button>
         </form>
+
+        {/* Mensaje del servidor */}
+        {serverMessage && (
+          <div className={`server-message ${serverMessage.includes("correctamente") ? "success" : "error"}`}>
+            {serverMessage}
+          </div>
+        )}
 
         <div className="auth-link-web">
           ¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link>
