@@ -3,6 +3,8 @@ import morgan from 'morgan';
 import cors from 'cors';
 import healthRoutes from './routes/health.route.js';
 import authRoutes from './routes/auth.route.js';
+import parqueaderoRoutes from './routes/parqueadero.route.js';
+import lugarRoutes from './routes/lugar.route.js';
 
 const app = express();
 
@@ -14,11 +16,16 @@ app.use(cors({
 }));
 
 // Configurar morgan para registrar las solicitudes HTTP
-app.use(morgan('dev')); // 'dev' es un formato predefinido que muestra información concisa
-
+app.use(morgan('dev'));
 app.use(express.json());
 
+// Rutas de salud y autenticación
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
+
+// Rutas de parqueaderos
+app.use('/api/parqueaderos', parqueaderoRoutes);
+app.use('/api/lugares', lugarRoutes);
+
 
 export default app;
