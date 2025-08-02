@@ -11,6 +11,16 @@ export interface Parqueadero {
   updatedAt?: string
 }
 
+// Nuevo tipo para los lugares de parqueo
+export interface Lugar {
+  id: string
+  parqueadero_id: string
+  numero: string // Ej: P1, P2, etc.
+  ocupado: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 export interface CreateParqueaderoRequest {
   nombre: string
   latitud: number
@@ -30,7 +40,7 @@ export interface UpdateParqueaderoRequest {
 
 export interface ParqueaderoResponse {
   message: string
-  data?: Parqueadero | Parqueadero[]
+  data?: Parqueadero | Parqueadero[] | Lugar[] // Añadir Lugar[] para respuestas de lugares
 }
 
 export interface ValidationError {
@@ -96,6 +106,7 @@ export const validateParqueaderoData = (
 // Servicio de parqueaderos
 class ParqueaderoService {
   private baseURL = `${import.meta.env.VITE_BACKEND_URL}/api/parqueaderos`
+  private lugaresURL = `${import.meta.env.VITE_BACKEND_URL}/api/lugares`
 
   // Obtener token de autenticación
   private getAuthHeaders() {
@@ -234,6 +245,54 @@ class ParqueaderoService {
       }
 
       throw new Error("Error de conexión con el servidor")
+    }
+  }
+
+  // Listar lugares por ID de parqueadero
+  async listLugaresByParqueadero(parqueaderoId: string): Promise<Lugar[]> {
+    try {
+      const response = await fetch(`${this.lugaresURL}/${parqueaderoId}`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      })
+
+      const data: ParqueaderoResponse = await response.json()
+      console.log("Lugares obtenidos",data);   
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al obtener los lugares del parqueadero")
+      }
+
+      return Array.isArray(data.data) ? data.data : []
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message)
+      }
+      throw new Error("Error de conexión con el servidor al listar lugares")
+    }
+  }
+
+  // Actualizar estado de un lugar
+  async updateLugar(lugarId: string, ocupado: boolean): Promise<ParqueaderoResponse> {
+    try {
+      const response = await fetch(`${this.lugaresURL}/${lugarId}`, {
+        method: "PUT",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ ocupado }),
+      })
+
+      const data: ParqueaderoResponse = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al actualizar el estado del lugar")
+      }
+
+      return data
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message)
+      }
+      throw new Error("Error de conexión con el servidor al actualizar lugar")
     }
   }
 }

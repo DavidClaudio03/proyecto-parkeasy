@@ -1,19 +1,49 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // Importar useMemo
 import {
   parqueaderoService,
   ValidationException,
   type ValidationError,
   type Parqueadero,
   type UpdateParqueaderoRequest,
+  type Lugar,
 } from "../services/parqueaderoService"
 
 interface ParqueaderoFormProps {
   parqueadero?: Parqueadero | null
   onSuccess: () => void
   onCancel: () => void
+}
+
+// Función de ordenamiento natural para cadenas como "A1", "A10", "A2"
+const naturalSortLugares = (a: Lugar, b: Lugar): number => {
+  const regex = /(\d+)/g // Captura secuencias de dígitos
+  const aParts = a.numero.split(regex).filter(Boolean)
+  const bParts = b.numero.split(regex).filter(Boolean)
+
+  for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+    const aPart = aParts[i]
+    const bPart = bParts[i]
+
+    const isANum = !isNaN(Number(aPart))
+    const isBNum = !isNaN(Number(bPart))
+
+    if (isANum && isBNum) {
+      // Si ambos son números, comparar numéricamente
+      const numA = Number(aPart)
+      const numB = Number(bPart)
+      if (numA !== numB) {
+        return numA - numB
+      }
+    } else if (aPart !== bPart) {
+      // Si son cadenas o una es número y la otra no, comparar alfabéticamente
+      return aPart.localeCompare(bPart)
+    }
+  }
+  // Si una cadena es prefijo de la otra (ej. "A" vs "A1"), la más corta va primero
+  return aParts.length - bParts.length
 }
 
 const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSuccess, onCancel }) => {
@@ -27,13 +57,17 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [serverMessage, setServerMessage] = useState("")
 
-  // Estados para la gestión de lugares
-  const [numeroLugar, setNumeroLugar] = useState("")
-  const [lugares, setLugares] = useState<string[]>([])
+  const [lugares, setLugares] = useState<Lugar[]>([])
+  const [loadingLugares, setLoadingLugares] = useState(false)
+  const [updatingLugarId, setUpdatingLugarId] = useState<string | null>(null)
 
   const isEditing = !!parqueadero
 
-  // Cargar datos del parqueadero si estamos editando
+  // Ordenar los lugares usando useMemo para evitar re-ordenamientos innecesarios
+  const sortedLugares = useMemo(() => {
+    return [...lugares].sort(naturalSortLugares)
+  }, [lugares])
+
   useEffect(() => {
     if (parqueadero) {
       setNombre(parqueadero.nombre)
@@ -43,39 +77,61 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
       setDireccion(parqueadero.direccion)
       setEstado(parqueadero.estado || "activo")
 
-      // Generar lugares basados en la capacidad
-      const lugaresArray = Array.from({ length: parqueadero.capacidad }, (_, i) => `P${i + 1}`)
-      setLugares(lugaresArray)
+      const fetchLugares = async () => {
+        setLoadingLugares(true)
+        try {
+          const fetchedLugares = await parqueaderoService.listLugaresByParqueadero(parqueadero.id)
+          console.log("📦 Lugares obtenidos del backend:", fetchedLugares)
+          setLugares(fetchedLugares)
+        } catch (error) {
+          console.error("Error al cargar los lugares:", error)
+          setServerMessage("Error al cargar los lugares del parqueadero.")
+        } finally {
+          setLoadingLugares(false)
+        }
+      }
+      fetchLugares()
+    } else {
+      setNombre("")
+      setLatitud("")
+      setLongitud("")
+      setCapacidad("")
+      setDireccion("")
+      setEstado("activo")
+      setLugares([])
     }
   }, [parqueadero])
 
-  // Función para obtener error específico de un campo
   const getFieldError = (fieldName: string): string => {
     const error = errors.find((err) => err.field === fieldName)
     return error ? error.message : ""
   }
 
-  // Función para limpiar errores
   const clearErrors = () => {
     setErrors([])
     setServerMessage("")
   }
 
-  // Función para agregar lugar
-  const handleAgregarLugar = () => {
-    if (numeroLugar.trim() && !lugares.includes(numeroLugar.trim())) {
-      setLugares([...lugares, numeroLugar.trim()])
-      setNumeroLugar("")
-    }
-  }
-
-  // Función para actualizar lugares basados en capacidad
   const handleCapacidadChange = (newCapacidad: string) => {
     setCapacidad(newCapacidad)
-    const cap = Number.parseInt(newCapacidad)
-    if (cap > 0) {
-      const lugaresArray = Array.from({ length: cap }, (_, i) => `P${i + 1}`)
-      setLugares(lugaresArray)
+    clearErrors()
+  }
+
+  const handleLugarClick = async (lugar: Lugar) => {
+    if (updatingLugarId === lugar.id) return
+
+    setUpdatingLugarId(lugar.id)
+    try {
+      const newOcupadoState = !lugar.ocupado
+      await parqueaderoService.updateLugar(lugar.id, newOcupadoState)
+
+      setLugares((prevLugares) => prevLugares.map((l) => (l.id === lugar.id ? { ...l, ocupado: newOcupadoState } : l)))
+      setServerMessage(`Lugar ${lugar.numero} actualizado a ${newOcupadoState ? "ocupado" : "disponible"}.`)
+    } catch (error) {
+      console.error("Error al actualizar el lugar:", error)
+      setServerMessage(error instanceof Error ? error.message : "Error al actualizar el lugar.")
+    } finally {
+      setUpdatingLugarId(null)
     }
   }
 
@@ -94,7 +150,6 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
       }
 
       if (isEditing && parqueadero) {
-        // Actualizar parqueadero existente
         const updateData: UpdateParqueaderoRequest = {
           ...parqueaderoData,
           estado,
@@ -102,12 +157,10 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
         await parqueaderoService.updateParqueadero(parqueadero.id, updateData)
         setServerMessage("Parqueadero actualizado correctamente")
       } else {
-        // Crear nuevo parqueadero
         await parqueaderoService.createParqueadero(parqueaderoData)
         setServerMessage("Parqueadero creado correctamente")
       }
 
-      // Llamar a onSuccess después de un breve delay
       setTimeout(() => {
         onSuccess()
       }, 1500)
@@ -263,48 +316,51 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-gray-900">Lugares del parqueadero</h2>
 
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="form-input-web flex-1"
-              placeholder="Número del lugar (ejemplo P1)"
-              value={numeroLugar}
-              onChange={(e) => setNumeroLugar(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={handleAgregarLugar}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded font-semibold transition-colors"
-            >
-              Actualizar
-            </button>
-          </div>
-
+        {isEditing ? (
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">
-              Cuadrícula de todos los lugares del parqueadero
+              Cuadrícula de disponibilidad de lugares
             </h3>
 
-            {lugares.length > 0 ? (
-              <div className="grid grid-cols-5 gap-2">
-                {lugares.map((lugar, index) => (
-                  <div
-                    key={index}
-                    className="bg-white border border-gray-300 rounded p-2 text-center text-sm font-medium text-gray-700"
+            {loadingLugares ? (
+              <div className="text-center text-gray-500 py-8">Cargando lugares...</div>
+            ) : sortedLugares.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                {sortedLugares.map((lugar) => (
+                  <button
+                    key={lugar.id}
+                    onClick={() => handleLugarClick(lugar)}
+                    disabled={updatingLugarId === lugar.id}
+                    className={`
+                      relative flex items-center justify-center p-2 text-center text-sm font-medium rounded-md transition-colors duration-200
+                      aspect-square w-full
+                      ${lugar.ocupado ? "bg-orange-400 text-white" : "bg-green-500 text-white"}
+                      ${updatingLugarId === lugar.id ? "opacity-70 cursor-not-allowed" : "hover:opacity-80 cursor-pointer"}
+                    `}
+                    aria-label={`Lugar ${lugar.numero} está ${lugar.ocupado ? "ocupado" : "disponible"}. Clic para cambiar.`}
                   >
-                    {lugar}
-                  </div>
+                    {lugar.numero}
+                    {updatingLugarId === lugar.id && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-md">
+                        ...
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                <p>No hay lugares definidos</p>
-                <p className="text-sm">Ingrese la capacidad para generar los lugares automáticamente</p>
+                <p>No hay lugares definidos para este parqueadero.</p>
+                <p className="text-sm">Asegúrate de que la capacidad sea mayor a 0 y el parqueadero esté creado.</p>
               </div>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-600 py-8">
+            <p>La gestión visual de lugares estará disponible una vez que el parqueadero haya sido creado.</p>
+            <p className="text-sm">Puedes definir la capacidad en el formulario de la izquierda.</p>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -59,12 +59,28 @@ html {
 .bg-green-700 {
   background-color: #047857;
 }
+/* Colores para los lugares de parqueo */
+.bg-green-500 {
+  background-color: #22c55e; /* Tailwind green-500 */
+}
+.bg-orange-400 {
+  background-color: #fb923c; /* Tailwind orange-400 */
+}
+.bg-black {
+  background-color: black;
+}
+.bg-opacity-30 {
+  background-color: rgba(0, 0, 0, 0.3);
+}
 
 .text-white {
   color: white;
 }
 .text-gray-600 {
   color: #4b5563;
+}
+.text-gray-700 {
+  color: #374151; /* Tailwind gray-700 */
 }
 .text-gray-900 {
   color: #111827 !important; /* Added !important */
@@ -100,6 +116,9 @@ html {
 }
 .rounded-full {
   border-radius: 9999px;
+}
+.rounded-md {
+  border-radius: 0.375rem; /* Tailwind rounded-md */
 }
 
 .flex {
@@ -143,7 +162,13 @@ html {
 .space-y-4 > * + * {
   margin-top: 1rem;
 }
+.space-y-6 > * + * {
+  margin-top: 1.5rem; /* Tailwind space-y-6 */
+}
 
+.gap-2 {
+  gap: 0.5rem; /* Tailwind gap-2 */
+}
 .gap-4 {
   gap: 1rem;
 }
@@ -154,6 +179,9 @@ html {
   gap: 3rem;
 }
 
+.p-2 {
+  padding: 0.5rem; /* Tailwind p-2 */
+}
 .p-4 {
   padding: 1rem;
 }
@@ -295,6 +323,9 @@ html {
 .transition-colors {
   transition: color 0.2s, background-color 0.2s;
 }
+.duration-200 {
+  transition-duration: 200ms; /* Tailwind duration-200 */
+}
 
 .hover\:bg-blue-700:hover {
   background-color: #1d4ed8;
@@ -308,10 +339,16 @@ html {
 .hover\:text-blue-600:hover {
   color: #2563eb;
 }
+.hover\:opacity-80:hover {
+  opacity: 0.8; /* Tailwind hover:opacity-80 */
+}
 
 /* Grid responsive */
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* Tailwind grid-cols-3 */
 }
 
 @media (min-width: 768px) {
@@ -323,6 +360,9 @@ html {
   }
   .md\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .md\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr)); /* Tailwind md:grid-cols-5 */
   }
   .md\:text-4xl {
     font-size: 2.25rem;
@@ -340,12 +380,18 @@ html {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
+  .sm\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)); /* Tailwind sm:grid-cols-4 */
+  }
 }
 
 @media (min-width: 1024px) {
   .lg\:px-8 {
     padding-left: 2rem;
     padding-right: 2rem;
+  }
+  .lg\:grid-cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)); /* Tailwind lg:grid-cols-6 */
   }
 }
 
@@ -632,20 +678,6 @@ html {
   box-shadow: none;
 }
 
-/* Responsive para formularios web */
-@media (max-width: 640px) {
-  .auth-container-web {
-    min-width: 320px;
-    max-width: 400px;
-    padding: 2rem;
-    margin: 1rem;
-  }
-
-  .auth-title-web {
-    font-size: 1.75rem;
-  }
-}
-
 /* Specific styles for table in ParqueaderoList to ensure text visibility */
 .min-w-full th {
   color: #111827; /* Ensure header text is dark */
@@ -658,4 +690,30 @@ html {
 .min-w-full td .text-gray-500 {
   /* Specific for coordinates if needed */
   color: #6b7280;
+}
+
+/* --- Parking Spot Grid Styles --- */
+.relative {
+  position: relative;
+}
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+.opacity-70 {
+  opacity: 0.7;
+}
+.absolute {
+  position: absolute;
+}
+.inset-0 {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
