@@ -33,20 +33,37 @@ export default function RegisterPage() {
     clearErrors()
 
     try {
-      const response = await authService.register({
+      // Primero registrar al usuario
+      const registerResponse = await authService.register({
         nombre: name,
         email,
         contraseña: password,
       })
 
       // Registro exitoso
-      setServerMessage(response.message)
-      console.log("Registro exitoso:", response)
+      setServerMessage("Registro exitoso. Iniciando sesión automáticamente...")
+      console.log("Registro exitoso:", registerResponse)
 
-      // Redirigir al login después de un breve delay
-      setTimeout(() => {
-        navigate("/login")
-      }, 2000)
+      // Después del registro exitoso, hacer login automáticamente
+      try {
+        const loginResponse = await authService.login({
+          email,
+          contraseña: password,
+        })
+
+        console.log("Login automático exitoso:", loginResponse)
+
+        // Redirigir al dashboard después de un breve delay
+        setTimeout(() => {
+          navigate("/dashboard")
+        }, 1500)
+      } catch (loginError) {
+        // Si el login automático falla, mostrar mensaje y redirigir al login manual
+        setServerMessage("Registro exitoso. Por favor, inicia sesión manualmente.")
+        setTimeout(() => {
+          navigate("/login")
+        }, 2000)
+      }
     } catch (error) {
       if (error instanceof ValidationException) {
         // Errores de validación
@@ -121,13 +138,13 @@ export default function RegisterPage() {
           </div>
 
           <button type="submit" className="auth-button-web" disabled={isLoading}>
-            {isLoading ? "Registrando..." : "Registrar"}
+            {isLoading ? "Registrando e iniciando sesión..." : "Registrar"}
           </button>
         </form>
 
         {/* Mensaje del servidor */}
         {serverMessage && (
-          <div className={`server-message ${serverMessage.includes("correctamente") ? "success" : "error"}`}>
+          <div className={`server-message ${serverMessage.includes("exitoso") ? "success" : "error"}`}>
             {serverMessage}
           </div>
         )}
