@@ -75,9 +75,9 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="page-container">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando dashboard...</p>
+        <div className="dashboard-loading">
+          <div className="dashboard-loading-spinner"></div>
+          <p className="dashboard-loading-text">Cargando dashboard...</p>
         </div>
       </div>
     )
@@ -86,19 +86,32 @@ export default function DashboardPage() {
   return (
     <div className="page-container">
       <div className="w-full max-w-7xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Header */}
-        <header className="bg-gray-100 border-b border-gray-200">
-          <div className="px-6 py-4">
+        {/* Enhanced Header */}
+        <header className="dashboard-header">
+          <div className="dashboard-header-content">
             <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <img src={logoImage || "/placeholder.svg"} alt="ParkEasy Logo" className="w-10 h-10 rounded-lg" />
+              <div className="dashboard-logo-container">
+                <img src={logoImage || "/placeholder.svg"} alt="ParkEasy Logo" className="dashboard-logo" />
+                <div className="dashboard-brand">
+                  <h1 className="dashboard-brand-title">ParkEasy</h1>
+                  <p className="dashboard-brand-subtitle">Gestión de Parqueaderos</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <span className="text-gray-700">{userName}</span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold transition-colors"
-                >
+
+              <div className="dashboard-user-section">
+                <div className="dashboard-user-info">
+                  <p className="dashboard-user-greeting">Bienvenido,</p>
+                  <p className="dashboard-user-name">{userName}</p>
+                </div>
+                <button onClick={handleLogout} className="dashboard-logout-btn">
+                  <svg className="dashboard-logout-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
                   Salir
                 </button>
               </div>
@@ -106,39 +119,48 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="p-6">
-          {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">{error}</div>}
-
-          {showForm ? (
-            <ParqueaderoForm
-              parqueadero={editingParqueadero}
-              onSuccess={handleFormSuccess}
-              onCancel={handleFormCancel}
-            />
-          ) : (
-            <div className="space-y-6">
-              {/* Actions Bar */}
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Mis Parqueaderos</h2>
-                  <p className="text-gray-600">Gestiona tus espacios de estacionamiento</p>
-                </div>
-                <button
-                  onClick={handleCreateNew}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Nuevo Parqueadero</span>
-                </button>
+        {/* Enhanced Main Content */}
+        <main className="dashboard-main">
+          <div className="dashboard-content-wrapper">
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 mx-6 mt-6">
+                {error}
               </div>
+            )}
 
-              {/* Parqueaderos List */}
-              <ParqueaderoList parqueaderos={parqueaderos} onEdit={handleEdit} onRefresh={loadParqueaderos} />
-            </div>
-          )}
+            {showForm ? (
+              <div className="p-6">
+                <ParqueaderoForm
+                  parqueadero={editingParqueadero}
+                  onSuccess={handleFormSuccess}
+                  onCancel={handleFormCancel}
+                />
+              </div>
+            ) : (
+              <>
+                {/* Enhanced Actions Bar */}
+                <div className="dashboard-actions-bar">
+                  <div className="dashboard-actions-content">
+                    <div className="dashboard-title-section">
+                      <h2>Mis Parqueaderos</h2>
+                      <p>Gestiona tus espacios de estacionamiento de manera eficiente</p>
+                    </div>
+                    <button onClick={handleCreateNew} className="dashboard-new-btn">
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Nuevo Parqueadero
+                    </button>
+                  </div>
+                </div>
+
+                {/* Parqueaderos List */}
+                <div className="p-6">
+                  <ParqueaderoList parqueaderos={parqueaderos} onEdit={handleEdit} onRefresh={loadParqueaderos} />
+                </div>
+              </>
+            )}
+          </div>
         </main>
       </div>
     </div>
