@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { parqueaderoService, type Parqueadero } from "../services/parqueaderoService"
+import ConfirmationDialog from "./ConfirmationDialog" // Importa tu componente de diálogo personalizado
 
 interface ParqueaderoListProps {
   parqueaderos: Parqueadero[]
@@ -12,13 +13,21 @@ interface ParqueaderoListProps {
 
 const ParqueaderoList: React.FC<ParqueaderoListProps> = ({ parqueaderos, onEdit, onRefresh }) => {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [parqueaderoToDelete, setParqueaderoToDelete] = useState<{ id: string; nombre: string } | null>(null)
 
-  const handleDelete = async (id: string, nombre: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el parqueadero "${nombre}"?`)) {
-      return
-    }
+  const handleDeleteClick = (id: string, nombre: string) => {
+    setParqueaderoToDelete({ id, nombre })
+    setShowConfirmDialog(true)
+  }
 
+  const confirmDelete = async () => {
+    if (!parqueaderoToDelete) return
+
+    const { id, nombre } = parqueaderoToDelete
     setDeletingId(id)
+    setShowConfirmDialog(false) // Cerrar el diálogo inmediatamente
+
     try {
       await parqueaderoService.deleteParqueadero(id)
       onRefresh() // Refrescar la lista después de eliminar
@@ -26,6 +35,7 @@ const ParqueaderoList: React.FC<ParqueaderoListProps> = ({ parqueaderos, onEdit,
       alert(error instanceof Error ? error.message : "Error al eliminar el parqueadero")
     } finally {
       setDeletingId(null)
+      setParqueaderoToDelete(null) // Limpiar el estado del parqueadero a eliminar
     }
   }
 
@@ -53,7 +63,6 @@ const ParqueaderoList: React.FC<ParqueaderoListProps> = ({ parqueaderos, onEdit,
       <div className="px-6 py-4 border-b border-gray-200">
         <h2 className="text-xl font-semibold text-gray-900">Mis Parqueaderos ({parqueaderos.length})</h2>
       </div>
-
       <div className="overflow-x-auto">
         <table className="min-w-full w-full divide-y divide-gray-200">
           {" "}
@@ -113,14 +122,14 @@ const ParqueaderoList: React.FC<ParqueaderoListProps> = ({ parqueaderos, onEdit,
                   <div className="flex space-x-2">
                     <button
                       onClick={() => onEdit(parqueadero)}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      className="px-3 py-1 text-blue-600 hover:text-blue-900 transition-colors rounded-md hover:bg-blue-50"
                       disabled={deletingId === parqueadero.id}
                     >
                       Gestionar
                     </button>
                     <button
-                      onClick={() => handleDelete(parqueadero.id, parqueadero.nombre)}
-                      className="text-red-600 hover:text-red-900 transition-colors"
+                      onClick={() => handleDeleteClick(parqueadero.id, parqueadero.nombre)}
+                      className="px-3 py-1 text-red-600 hover:text-red-900 transition-colors rounded-md hover:bg-red-50"
                       disabled={deletingId === parqueadero.id}
                     >
                       {deletingId === parqueadero.id ? "Eliminando..." : "Eliminar"}
@@ -132,6 +141,20 @@ const ParqueaderoList: React.FC<ParqueaderoListProps> = ({ parqueaderos, onEdit,
           </tbody>
         </table>
       </div>
+
+      {/* Custom Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={confirmDelete}
+        title="¿Estás absolutamente seguro?"
+        message={
+          <>
+            Esta acción no se puede deshacer. Esto eliminará permanentemente el parqueadero{" "}
+            <span className="font-semibold">{parqueaderoToDelete?.nombre}</span> de nuestros servidores.
+          </>
+        }
+      />
     </div>
   )
 }
