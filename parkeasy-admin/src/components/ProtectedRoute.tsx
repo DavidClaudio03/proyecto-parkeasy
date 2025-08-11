@@ -1,4 +1,7 @@
+"use client"
+
 import type React from "react"
+
 import { Navigate } from "react-router-dom"
 import { authService } from "../services/authService"
 
@@ -7,8 +10,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  if (!authService.isAuthenticated()) {
-    // Si el usuario no está autenticado, redirige a la página de login
+  const isAuthenticated = authService.isAuthenticated()
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
