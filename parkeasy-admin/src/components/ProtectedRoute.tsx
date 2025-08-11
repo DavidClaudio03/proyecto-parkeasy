@@ -22,4 +22,5 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Si hay sesión, renderiza el contenido protegido
   return <>{children}</>
 
+  }
 export default ProtectedRoute
