@@ -10,6 +10,8 @@ import {
   type UpdateParqueaderoRequest,
   type Lugar,
 } from "../services/parqueaderoService"
+import FloatingInput from "./FloatingInput"
+import FloatingSelect from "./FloatingSelect"
 
 interface ParqueaderoFormProps {
   parqueadero?: Parqueadero | null
@@ -184,106 +186,94 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
         <h2 className="text-2xl font-bold text-gray-900">Formulario de parqueadero</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
-              type="text"
-              className={`form-input-web ${getFieldError("nombre") ? "error" : ""}`}
-              placeholder="Ingrese el nombre del parqueadero."
-              value={nombre}
-              onChange={(e) => {
-                setNombre(e.target.value)
-                clearErrors()
-              }}
-              disabled={isLoading}
-              required
-            />
-            {getFieldError("nombre") && <div className="error-message">{getFieldError("nombre")}</div>}
-          </div>
+          <FloatingInput
+            type="text"
+            value={nombre}
+            onChange={(e) => {
+              setNombre(e.target.value)
+              clearErrors()
+            }}
+            label="Nombre del parqueadero"
+            placeholder="Ingrese el nombre del parqueadero"
+            error={getFieldError("nombre")}
+            disabled={isLoading}
+            required
+          />
 
-          <div>
-            <input
-              type="text"
-              className={`form-input-web ${getFieldError("direccion") ? "error" : ""}`}
-              placeholder="Ingrese las calles"
-              value={direccion}
-              onChange={(e) => {
-                setDireccion(e.target.value)
-                clearErrors()
-              }}
-              disabled={isLoading}
-              required
-            />
-            {getFieldError("direccion") && <div className="error-message">{getFieldError("direccion")}</div>}
-          </div>
+          <FloatingInput
+            type="text"
+            value={direccion}
+            onChange={(e) => {
+              setDireccion(e.target.value)
+              clearErrors()
+            }}
+            label="Dirección"
+            placeholder="Ingrese las calles"
+            error={getFieldError("direccion")}
+            disabled={isLoading}
+            required
+          />
 
-          <div>
-            <input
-              type="number"
-              step="any"
-              className={`form-input-web ${getFieldError("longitud") ? "error" : ""}`}
-              placeholder="Ingrese la coordenada longitud"
-              value={longitud}
-              onChange={(e) => {
-                setLongitud(e.target.value)
-                clearErrors()
-              }}
-              disabled={isLoading}
-              min="-180"
-              max="180"
-              required
-            />
-            {getFieldError("longitud") && <div className="error-message">{getFieldError("longitud")}</div>}
-          </div>
+          <FloatingInput
+            type="number"
+            step="any"
+            value={longitud}
+            onChange={(e) => {
+              setLongitud(e.target.value)
+              clearErrors()
+            }}
+            label="Coordenada Longitud"
+            placeholder="Ingrese la coordenada longitud"
+            error={getFieldError("longitud")}
+            disabled={isLoading}
+            min="-180"
+            max="180"
+            required
+          />
 
-          <div>
-            <input
-              type="number"
-              step="any"
-              className={`form-input-web ${getFieldError("latitud") ? "error" : ""}`}
-              placeholder="Ingrese la coordenada latitud"
-              value={latitud}
-              onChange={(e) => {
-                setLatitud(e.target.value)
-                clearErrors()
-              }}
-              disabled={isLoading}
-              min="-90"
-              max="90"
-              required
-            />
-            {getFieldError("latitud") && <div className="error-message">{getFieldError("latitud")}</div>}
-          </div>
+          <FloatingInput
+            type="number"
+            step="any"
+            value={latitud}
+            onChange={(e) => {
+              setLatitud(e.target.value)
+              clearErrors()
+            }}
+            label="Coordenada Latitud"
+            placeholder="Ingrese la coordenada latitud"
+            error={getFieldError("latitud")}
+            disabled={isLoading}
+            min="-90"
+            max="90"
+            required
+          />
 
-          <div>
-            <input
-              type="number"
-              className={`form-input-web ${getFieldError("capacidad") ? "error" : ""}`}
-              placeholder="Ingrese la capacidad"
-              value={capacidad}
-              onChange={(e) => {
-                handleCapacidadChange(e.target.value)
-                clearErrors()
-              }}
-              disabled={isLoading}
-              min="1"
-              max="1000"
-              required
-            />
-            {getFieldError("capacidad") && <div className="error-message">{getFieldError("capacidad")}</div>}
-          </div>
+          <FloatingInput
+            type="number"
+            value={capacidad}
+            onChange={(e) => {
+              handleCapacidadChange(e.target.value)
+              clearErrors()
+            }}
+            label="Capacidad"
+            placeholder="Ingrese la capacidad"
+            error={getFieldError("capacidad")}
+            disabled={isLoading}
+            min="1"
+            max="1000"
+            required
+          />
 
           {isEditing && (
-            <div>
-              <select
-                className="form-input-web"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value as "activo" | "inactivo")}
-                disabled={isLoading}
-              >
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
-            </div>
+            <FloatingSelect
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as "activo" | "inactivo")}
+              label="Estado"
+              disabled={isLoading}
+            >
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </FloatingSelect>
           )}
 
           <button
