@@ -3,11 +3,13 @@
 import type React from "react"
 import { Component, type ReactNode } from "react"
 
+// Props: recibe hijos a renderizar y opcionalmente un fallback personalizado
 interface Props {
   children: ReactNode
   fallback?: ReactNode
 }
 
+// Estado interno del ErrorBoundary
 interface State {
   hasError: boolean
   error?: Error
@@ -19,10 +21,12 @@ class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false }
   }
 
+    // Se ejecuta cuando ocurre un error en un hijo
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error }
   }
 
+  // Captura detalles adicionales del error
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo)
   }

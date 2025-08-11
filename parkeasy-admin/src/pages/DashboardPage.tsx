@@ -10,19 +10,22 @@ import ErrorBoundary from "../components/ErrorBoundary"
 import OfflineNotice from "../components/OfflineNotice"
 
 export default function DashboardPage() {
+  // ==== Estados principales ====
   const navigate = useNavigate()
-  const [parqueaderos, setParqueaderos] = useState<Parqueadero[]>([])
+  const [parqueaderos, setParqueaderos] = useState<Parqueadero[]>([])// Lista de parqueaderos del usuario
   const [isLoading, setIsLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(false)// Muestra/oculta el formulario
   const [editingParqueadero, setEditingParqueadero] = useState<Parqueadero | null>(null)
   const [error, setError] = useState("")
   const [userName, setUserName] = useState("Usuario") // Estado para el nombre del usuario
 
+  // ==== Cierre de sesión ====
   const handleLogout = () => {
-    authService.logout()
-    navigate("/login")
+    authService.logout() // Borra datos en localStorage
+    navigate("/login")   // Redirige al login
   }
 
+   // ==== Carga de parqueaderos ====
   const loadParqueaderos = async () => {
     try {
       setIsLoading(true)
@@ -32,6 +35,7 @@ export default function DashboardPage() {
     } catch (error: any) {
       console.error("Error loading parqueaderos:", error)
 
+      // Diferencia entre fallo de red y otros errores
       if (error.isNetworkError || error.isServerDown) {
         setError("No se pudo conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.")
       } else {
@@ -42,6 +46,7 @@ export default function DashboardPage() {
     }
   }
 
+  // ==== Carga inicial (usuario + parqueaderos) ====
   useEffect(() => {
     const loadInitialData = async () => {
       // Cargar nombre del usuario
@@ -51,11 +56,11 @@ export default function DashboardPage() {
       } catch (error: any) {
         console.error("Error al cargar información del usuario:", error)
 
-        // Fallback to localStorage if server is down
+        // Si el servidor no responde, usa localStorage como respaldo
         const fallbackName = authService.getUserName()
         setUserName(fallbackName || "Usuario")
 
-        // Don't show error for user info if we have fallback
+        // No mostrar error para la información del usuario si tenemos respaldo
         if (!fallbackName && !error.isNetworkError) {
           console.warn("Could not load user info and no fallback available")
         }
@@ -67,6 +72,7 @@ export default function DashboardPage() {
     loadInitialData()
   }, [])
 
+  // ==== Eventos del formulario ====
   const handleCreateNew = () => {
     setEditingParqueadero(null)
     setShowForm(true)
@@ -88,6 +94,7 @@ export default function DashboardPage() {
     setEditingParqueadero(null)
   }
 
+  // ==== Vista principal del dashboard ====
   if (isLoading) {
     return (
       <ErrorBoundary>

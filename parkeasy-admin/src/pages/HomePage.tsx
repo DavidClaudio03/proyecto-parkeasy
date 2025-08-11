@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom"
-import logoImage from "../assets/ParkEasyLogo.png" // Ajusta la extensión según tu archivo (.png, .svg, .jpg, etc.)
+import logoImage from "../assets/ParkEasyLogo.png" // Logo principal
 
-// Simple icon components (you can replace with react-icons or lucide-react)
+// ====== Componentes de íconos SVG reutilizables ======
+// (Se usan en distintas secciones para mejorar la UI visual)
 const CarIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
@@ -75,6 +76,7 @@ const MonitorIcon = () => (
   </svg>
 )
 
+// ====== Componente principal de la página ======
 export default function HomePage() {
   return (
     <div className="homepage-container">

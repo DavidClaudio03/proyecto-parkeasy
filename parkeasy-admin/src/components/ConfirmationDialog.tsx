@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+// Props que recibe el componente para personalizarlo
 interface ConfirmationDialogProps {
   isOpen: boolean
   onClose: () => void

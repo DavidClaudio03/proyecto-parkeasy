@@ -49,16 +49,18 @@ const naturalSortLugares = (a: Lugar, b: Lugar): number => {
 }
 
 const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSuccess, onCancel }) => {
+  // ===== Estado del formulario (lado izquierdo) =====
   const [nombre, setNombre] = useState("")
   const [latitud, setLatitud] = useState("")
   const [longitud, setLongitud] = useState("")
   const [capacidad, setCapacidad] = useState("")
   const [direccion, setDireccion] = useState("")
-  const [estado, setEstado] = useState<"activo" | "inactivo">("activo")
+  const [estado, setEstado] = useState<"activo" | "inactivo">("activo")// solo visible en edición
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [serverMessage, setServerMessage] = useState("")
 
+  // ===== Gestión de lugares (lado derecho) =====
   const [lugares, setLugares] = useState<Lugar[]>([])
   const [loadingLugares, setLoadingLugares] = useState(false)
   const [updatingLugarId, setUpdatingLugarId] = useState<string | null>(null)
@@ -83,7 +85,7 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
         setLoadingLugares(true)
         try {
           const fetchedLugares = await parqueaderoService.listLugaresByParqueadero(parqueadero.id)
-          console.log("📦 Lugares obtenidos del backend:", fetchedLugares)
+          console.log("Lugares obtenidos del backend:", fetchedLugares)
           setLugares(fetchedLugares)
         } catch (error) {
           console.error("Error al cargar los lugares:", error)
@@ -104,6 +106,7 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
     }
   }, [parqueadero])
 
+  // ===== Helpers de errores =====
   const getFieldError = (fieldName: string): string => {
     const error = errors.find((err) => err.field === fieldName)
     return error ? error.message : ""
@@ -119,6 +122,7 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
     clearErrors()
   }
 
+  // ===== Toggle de un lugar: ocupado <-> disponible (actualiza backend y estado local) =====
   const handleLugarClick = async (lugar: Lugar) => {
     if (updatingLugarId === lugar.id) return
 
@@ -163,14 +167,15 @@ const ParqueaderoForm: React.FC<ParqueaderoFormProps> = ({ parqueadero, onSucces
         setServerMessage("Parqueadero creado correctamente")
       }
 
+      // Pequeño delay para que el usuario vea el mensaje de éxito antes de cerrar
       setTimeout(() => {
         onSuccess()
       }, 1500)
     } catch (error) {
       if (error instanceof ValidationException) {
-        setErrors(error.errors)
+        setErrors(error.errors)   // errores por campo desde backend
       } else if (error instanceof Error) {
-        setServerMessage(error.message)
+        setServerMessage(error.message)  // error genérico del servidor
       } else {
         setServerMessage("Error inesperado. Inténtalo de nuevo.")
       }
