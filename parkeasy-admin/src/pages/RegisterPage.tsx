@@ -4,7 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import logoImage from "../assets/ParkEasyLogo.png"
-import { ValidationException, type ValidationError } from "../services/authService"
+import { authService, ValidationException, type ValidationError } from "../services/authService"
 
 interface RegisterRequest {
   nombre: string
@@ -75,7 +75,6 @@ export default function RegisterPage() {
     setIsLoading(true)
     clearErrors()
 
-    // Validar formulario localmente
     const validationErrors = validateForm()
     if (validationErrors.length > 0) {
       setErrors(validationErrors)
@@ -84,31 +83,27 @@ export default function RegisterPage() {
     }
 
     try {
-      // Simular registro (ya que no tenemos endpoint de registro en el servicio actual)
-      // En una implementación real, esto sería authService.register()
       const registerData: RegisterRequest = {
         nombre: nombre.trim(),
         email: email.trim(),
         contraseña: password,
-        confirmarContraseña: confirmPassword,
       }
 
-      // Por ahora, simularemos un registro exitoso
-      // En el futuro, esto debería ser reemplazado por una llamada real al backend
-      await new Promise((resolve) => setTimeout(resolve, 1500)) // Simular delay de red
+      const response = await authService.register(registerData)
 
-      setServerMessage("Registro exitoso. Redirigiendo al login...")
+      setServerMessage("Registro exitoso. Redirigiendo...")
 
-      // Redirigir al login después de un breve delay
       setTimeout(() => {
-        navigate("/login")
+        if (response.token) {
+          navigate("/dashboard")
+        } else {
+          navigate("/login")
+        }
       }, 1500)
     } catch (error) {
       if (error instanceof ValidationException) {
-        // Errores de validación del servidor
         setErrors(error.errors)
       } else if (error instanceof Error) {
-        // Errores del servidor o de red
         setServerMessage(error.message)
       } else {
         setServerMessage("Error inesperado. Inténtalo de nuevo.")
