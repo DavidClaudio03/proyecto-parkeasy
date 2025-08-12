@@ -2,6 +2,7 @@ import { NetworkErrorHandler } from "../utils/networkUtils"
 import { type LoginRequest, type LoginResponse, type User, ValidationException } from "../types/authTypes"
 import { validateLoginData } from "../utils/validationUtils"
 
+// DTO de petición para registro
 export interface RegisterRequest {
   nombre: string
   email: string
@@ -9,8 +10,12 @@ export interface RegisterRequest {
 }
 
 class AuthService {
+  // Base del backend tomada de variables de entorno de Vite.
+  // Ej.: VITE_BACKEND_URL="http://localhost:3000"
   private baseURL = `${import.meta.env.VITE_BACKEND_URL}/api/auth`
 
+  // Construye headers con token JWT almacenado en localStorage.
+  // Útil para endpoints protegidos (/me).
   private getAuthHeaders() {
     const token = localStorage.getItem("authToken")
     return {
@@ -19,6 +24,8 @@ class AuthService {
     }
   }
 
+  // Envoltorio de fetch con reintentos y manejo de errores unificado.
+  // Si la respuesta no es OK, intenta parsear JSON de error y lanza una excepción enriquecida.
   private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
     return NetworkErrorHandler.withRetry(async () => {
       const response = await fetch(url, options)
@@ -34,6 +41,7 @@ class AuthService {
           error.message = `Error ${response.status}: ${response.statusText}`
         }
 
+        // Importante: lanzar para que el caller (login/register/...) maneje el error.
         throw error
       }
 
@@ -41,10 +49,12 @@ class AuthService {
     })
   }
 
+  // LOGIN: valida datos, hace POST, guarda token y datos mínimos de usuario.
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    // Validar datos antes de enviar
+    // Validar datos en el cliente antes de llamar al backend.
     const validationErrors = validateLoginData(credentials)
     if (validationErrors.length > 0) {
+      // Se usa una excepción de validación propia para manejar errores de formulario.
       throw new ValidationException(validationErrors)
     }
 
@@ -53,13 +63,14 @@ class AuthService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // Nota: aquí NO se envía Authorization; es login.
         },
         body: JSON.stringify(credentials),
       })
 
       const data: LoginResponse = await response.json()
 
-      // Guardar token y datos del usuario
+      // Persistencia del token y datos básicos del usuario para sesiones posteriores.
       if (data.token) {
         localStorage.setItem("authToken", data.token)
         if (data.user) {
@@ -70,6 +81,7 @@ class AuthService {
 
       return data
     } catch (error) {
+      // Propagar ValidationException tal cual, y estandarizar otros errores de red.
       if (error instanceof ValidationException) {
         throw error
       }
@@ -77,6 +89,8 @@ class AuthService {
     }
   }
 
+  // REGISTER: similar a login, pero contra /register.
+  // Si el backend devuelve token tras registrar, se inicia sesión automáticamente.
   async register(userData: RegisterRequest): Promise<LoginResponse> {
     try {
       const response = await this.fetchWithRetry(`${this.baseURL}/register`, {
@@ -89,7 +103,7 @@ class AuthService {
 
       const data: LoginResponse = await response.json()
 
-      // Guardar token y datos del usuario si el registro incluye login automático
+      // Autologin opcional según respuesta del backend.
       if (data.token) {
         localStorage.setItem("authToken", data.token)
         if (data.user) {
@@ -107,6 +121,8 @@ class AuthService {
     }
   }
 
+  // Obtiene información del usuario autenticado desde /me.
+  // Requiere enviar Authorization: Bearer <token>.
   async getUserInfo(): Promise<User> {
     try {
       const response = await this.fetchWithRetry(`${this.baseURL}/me`, {
@@ -121,6 +137,7 @@ class AuthService {
     }
   }
 
+  // Helpers para mostrar nombre/email en la UI sin ir al backend.
   getUserName(): string {
     return localStorage.getItem("userName") || "Usuario"
   }
@@ -129,14 +146,17 @@ class AuthService {
     return localStorage.getItem("userEmail") || ""
   }
 
+  // Obtiene el token actual (si existe) desde localStorage.
   getToken(): string | null {
     return localStorage.getItem("authToken")
   }
 
+  // Comprobación rápida de sesión basada en presencia de token (no valida expiración).
   isAuthenticated(): boolean {
     return !!this.getToken()
   }
 
+  // Limpia completamente la sesión local.
   logout(): void {
     localStorage.removeItem("authToken")
     localStorage.removeItem("userName")
@@ -144,6 +164,9 @@ class AuthService {
   }
 }
 
+// Export de una instancia singleton para usar en la app.
 export const authService = new AuthService()
+
+// Reexport de tipos/errores para uso externo.
 export { ValidationException } from "../types/authTypes"
 export type { ValidationError } from "../types/authTypes"
