@@ -20,13 +20,13 @@ export default function ParkingItem({ name, address, available, distance, onPres
                     <Text style={styles.name}>{name}</Text>
                     <Text style={styles.address}>{address}</Text>
                 </View>
-                {/* {typeof distance === 'number' && (
+                {typeof distance === 'number' && (
                 <Text style={styles.distance}>
                     {distance < 1
                         ? `${(distance * 1000).toFixed(0)} m`
                         : `${distance.toFixed(2)} km`}
                 </Text>
-            )} */}
+            )} 
                 <View style={styles.row}>
                     <MaterialCommunityIcons
                         name="car"

@@ -43,7 +43,7 @@ export default function LoginPage() {
 
       // Redirigir al dashboard o página principal después de un breve delay
       setTimeout(() => {
-        navigate("/dashboard") // Cambiado de "/" a "/dashboard"
+        navigate("/dashboard")
       }, 1500)
     } catch (error) {
       if (error instanceof ValidationException) {

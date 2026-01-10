@@ -103,6 +103,9 @@ export const validateParqueaderoData = (
   return errors
 }
 
+// Importar NetworkErrorHandler
+import { NetworkErrorHandler } from "../utils/networkUtils"
+
 // Servicio de parqueaderos
 class ParqueaderoService {
   private baseURL = `${import.meta.env.VITE_BACKEND_URL}/api/parqueaderos`
@@ -117,6 +120,29 @@ class ParqueaderoService {
     }
   }
 
+  private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+    return NetworkErrorHandler.withRetry(async () => {
+      const response = await fetch(url, options)
+
+      // Enhance response with status code for error handling
+      if (!response.ok) {
+        const error = new Error() as any
+        error.statusCode = response.status
+
+        try {
+          const data = await response.json()
+          error.message = data.message || `Error ${response.status}`
+        } catch {
+          error.message = `Error ${response.status}: ${response.statusText}`
+        }
+
+        throw error
+      }
+
+      return response
+    })
+  }
+
   // Crear parqueadero
   async createParqueadero(parqueaderoData: CreateParqueaderoRequest): Promise<ParqueaderoResponse> {
     // Validar datos antes de enviar
@@ -126,7 +152,7 @@ class ParqueaderoService {
     }
 
     try {
-      const response = await fetch(this.baseURL, {
+      const response = await this.fetchWithRetry(this.baseURL, {
         method: "POST",
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -139,46 +165,27 @@ class ParqueaderoService {
       })
 
       const data: ParqueaderoResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al crear el parqueadero")
-      }
-
       return data
     } catch (error) {
       if (error instanceof ValidationException) {
         throw error
       }
-
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
   // Listar mis parqueaderos
   async getMyParqueaderos(): Promise<Parqueadero[]> {
     try {
-      const response = await fetch(`${this.baseURL}/mis-parqueaderos`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/mis-parqueaderos`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       })
 
       const data: ParqueaderoResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al obtener los parqueaderos")
-      }
-
       return Array.isArray(data.data) ? data.data : []
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
@@ -191,7 +198,7 @@ class ParqueaderoService {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/${id}`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/${id}`, {
         method: "PUT",
         headers: this.getAuthHeaders(),
         body: JSON.stringify({
@@ -205,95 +212,83 @@ class ParqueaderoService {
       })
 
       const data: ParqueaderoResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al actualizar el parqueadero")
-      }
-
       return data
     } catch (error) {
       if (error instanceof ValidationException) {
         throw error
       }
-
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
   // Eliminar parqueadero
   async deleteParqueadero(id: string): Promise<ParqueaderoResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/${id}`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/${id}`, {
         method: "DELETE",
         headers: this.getAuthHeaders(),
       })
 
       const data: ParqueaderoResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al eliminar el parqueadero")
-      }
-
       return data
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
   // Listar lugares por ID de parqueadero
   async listLugaresByParqueadero(parqueaderoId: string): Promise<Lugar[]> {
     try {
-      const response = await fetch(`${this.lugaresURL}/${parqueaderoId}`, {
+      const response = await this.fetchWithRetry(`${this.lugaresURL}/${parqueaderoId}`, {
         method: "GET",
         headers: this.getAuthHeaders(),
       })
 
       const data: ParqueaderoResponse = await response.json()
-      console.log("Lugares obtenidos",data);   
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al obtener los lugares del parqueadero")
-      }
-
+      console.log("Lugares obtenidos", data)
       return Array.isArray(data.data) ? data.data : []
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-      throw new Error("Error de conexión con el servidor al listar lugares")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
   // Actualizar estado de un lugar
   async updateLugar(lugarId: string, ocupado: boolean): Promise<ParqueaderoResponse> {
     try {
-      const response = await fetch(`${this.lugaresURL}/${lugarId}`, {
+      const response = await this.fetchWithRetry(`${this.lugaresURL}/${lugarId}`, {
         method: "PUT",
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ ocupado }),
       })
 
       const data: ParqueaderoResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al actualizar el estado del lugar")
-      }
-
       return data
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-      throw new Error("Error de conexión con el servidor al actualizar lugar")
+      throw NetworkErrorHandler.enhanceError(error)
     }
+  }
+
+  // Update parqueadero capacity and regenerate parking spots
+  async updateParqueaderoCapacity(id: string, parqueaderoData: UpdateParqueaderoRequest): Promise<ParqueaderoResponse> {
+    // First update the parqueadero
+    const result = await this.updateParqueadero(id, parqueaderoData)
+
+    // Then refresh the parking spots to match the new capacity
+    try {
+      const response = await this.fetchWithRetry(`${this.baseURL}/${id}/regenerate-lugares`, {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ capacidad: parqueaderoData.capacidad }),
+      })
+
+      if (!response.ok) {
+        console.warn("Warning: Could not regenerate parking spots, but parqueadero was updated")
+      }
+    } catch (error) {
+      console.warn("Warning: Error regenerating parking spots:", error)
+    }
+
+    return result
   }
 }
 

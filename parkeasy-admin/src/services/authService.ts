@@ -1,175 +1,114 @@
-// Tipos para las respuestas de la API
+import { NetworkErrorHandler } from "../utils/networkUtils"
+import { type LoginRequest, type LoginResponse, type User, ValidationException } from "../types/authTypes"
+import { validateLoginData } from "../utils/validationUtils"
+
+// DTO de petición para registro
 export interface RegisterRequest {
   nombre: string
   email: string
   contraseña: string
 }
 
-export interface LoginRequest {
-  email: string
-  contraseña: string
-}
-
-export interface AuthResponse {
-  message: string
-  token?: string
-  data?: any
-}
-
-export interface UserInfo {
-  id: string
-  nombre: string
-  email: string
-}
-
-export interface ValidationError {
-  field: string
-  message: string
-}
-
-// Clase para manejar errores de validación
-export class ValidationException extends Error {
-  public errors: ValidationError[]
-
-  constructor(errors: ValidationError[]) {
-    super("Validation failed")
-    this.errors = errors
-    this.name = "ValidationException"
-  }
-}
-
-// Función para validar campos de registro
-export const validateRegisterData = (data: RegisterRequest): ValidationError[] => {
-  const errors: ValidationError[] = []
-
-  // Validar nombre
-  if (!data.nombre || data.nombre.trim() === "") {
-    errors.push({ field: "nombre", message: "El nombre es requerido" })
-  } else if (data.nombre.trim().length < 2) {
-    errors.push({ field: "nombre", message: "El nombre debe tener al menos 2 caracteres" })
-  }
-
-  // Validar email
-  if (!data.email || data.email.trim() === "") {
-    errors.push({ field: "email", message: "El email es requerido" })
-  } else {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email.trim())) {
-      errors.push({ field: "email", message: "El email no tiene un formato válido" })
-    }
-  }
-
-  // Validar contraseña
-  if (!data.contraseña || data.contraseña.trim() === "") {
-    errors.push({ field: "contraseña", message: "La contraseña es requerida" })
-  } else if (data.contraseña.length < 6) {
-    errors.push({ field: "contraseña", message: "La contraseña debe tener al menos 6 caracteres" })
-  }
-
-  return errors
-}
-
-// Función para validar campos de login
-export const validateLoginData = (data: LoginRequest): ValidationError[] => {
-  const errors: ValidationError[] = []
-
-  // Validar email
-  if (!data.email || data.email.trim() === "") {
-    errors.push({ field: "email", message: "El email es requerido" })
-  } else {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(data.email.trim())) {
-      errors.push({ field: "email", message: "El email no tiene un formato válido" })
-    }
-  }
-
-  // Validar contraseña
-  if (!data.contraseña || data.contraseña.trim() === "") {
-    errors.push({ field: "contraseña", message: "La contraseña es requerida" })
-  }
-
-  return errors
-}
-
-// Servicio de autenticación
 class AuthService {
+  // Base del backend tomada de variables de entorno de Vite.
+  // Ej.: VITE_BACKEND_URL="http://localhost:3000"
   private baseURL = `${import.meta.env.VITE_BACKEND_URL}/api/auth`
 
-  // Método para registrar usuario
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
-    // Validar datos antes de enviar
-    const validationErrors = validateRegisterData(userData)
+  // Construye headers con token JWT almacenado en localStorage.
+  // Útil para endpoints protegidos (/me).
+  private getAuthHeaders() {
+    const token = localStorage.getItem("authToken")
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    }
+  }
+
+  // Envoltorio de fetch con reintentos y manejo de errores unificado.
+  // Si la respuesta no es OK, intenta parsear JSON de error y lanza una excepción enriquecida.
+  private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+    return NetworkErrorHandler.withRetry(async () => {
+      const response = await fetch(url, options)
+
+      if (!response.ok) {
+        const error = new Error() as any
+        error.statusCode = response.status
+
+        try {
+          const data = await response.json()
+          error.message = data.message || `Error ${response.status}`
+        } catch {
+          error.message = `Error ${response.status}: ${response.statusText}`
+        }
+
+        // Importante: lanzar para que el caller (login/register/...) maneje el error.
+        throw error
+      }
+
+      return response
+    })
+  }
+
+  // LOGIN: valida datos, hace POST, guarda token y datos mínimos de usuario.
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    // Validar datos en el cliente antes de llamar al backend.
+    const validationErrors = validateLoginData(credentials)
     if (validationErrors.length > 0) {
+      // Se usa una excepción de validación propia para manejar errores de formulario.
       throw new ValidationException(validationErrors)
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/register`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // Nota: aquí NO se envía Authorization; es login.
         },
-        body: JSON.stringify({
-          nombre: userData.nombre.trim(),
-          email: userData.email.trim().toLowerCase(),
-          contraseña: userData.contraseña,
-        }),
+        body: JSON.stringify(credentials),
       })
 
-      const data: AuthResponse = await response.json()
+      const data: LoginResponse = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.message || "Error en el registro")
+      // Persistencia del token y datos básicos del usuario para sesiones posteriores.
+      if (data.token) {
+        localStorage.setItem("authToken", data.token)
+        if (data.user) {
+          localStorage.setItem("userName", data.user.nombre)
+          localStorage.setItem("userEmail", data.user.email)
+        }
       }
 
       return data
     } catch (error) {
+      // Propagar ValidationException tal cual, y estandarizar otros errores de red.
       if (error instanceof ValidationException) {
         throw error
       }
-
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
-  // Método para hacer login
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
-    // Validar datos antes de enviar
-    const validationErrors = validateLoginData(credentials)
-    if (validationErrors.length > 0) {
-      throw new ValidationException(validationErrors)
-    }
-
+  // REGISTER: similar a login, pero contra /register.
+  // Si el backend devuelve token tras registrar, se inicia sesión automáticamente.
+  async register(userData: RegisterRequest): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/login`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: credentials.email.trim().toLowerCase(),
-          contraseña: credentials.contraseña,
-        }),
+        body: JSON.stringify(userData),
       })
 
-      const data: AuthResponse = await response.json()
+      const data: LoginResponse = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.message || "Error en el login")
-      }
-
-      // Si el login es exitoso y hay token, guardarlo en localStorage
+      // Autologin opcional según respuesta del backend.
       if (data.token) {
         localStorage.setItem("authToken", data.token)
-        localStorage.setItem("isAuthenticated", "true")
-
-        // Guardar información del usuario si está disponible
-        if (data.data) {
-          localStorage.setItem("userInfo", JSON.stringify(data.data))
+        if (data.user) {
+          localStorage.setItem("userName", data.user.nombre)
+          localStorage.setItem("userEmail", data.user.email)
         }
       }
 
@@ -178,89 +117,56 @@ class AuthService {
       if (error instanceof ValidationException) {
         throw error
       }
-
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
-  // Método para obtener información del usuario
-  async getUserInfo(): Promise<UserInfo> {
+  // Obtiene información del usuario autenticado desde /me.
+  // Requiere enviar Authorization: Bearer <token>.
+  async getUserInfo(): Promise<User> {
     try {
-      // Primero intentar obtener de localStorage
-      const storedUserInfo = localStorage.getItem("userInfo")
-      if (storedUserInfo) {
-        return JSON.parse(storedUserInfo)
-      }
-
-      // Si no está en localStorage, hacer petición al servidor
-      const token = this.getToken()
-      if (!token) {
-        throw new Error("No hay token de autenticación")
-      }
-
-      const response = await fetch(`${this.baseURL}/me`, {
+      const response = await this.fetchWithRetry(`${this.baseURL}/me`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: this.getAuthHeaders(),
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al obtener información del usuario")
-      }
-
-      // Guardar en localStorage para futuras consultas
-      localStorage.setItem("userInfo", JSON.stringify(data.data))
-
-      return data.data
+      return data.user
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message)
-      }
-      throw new Error("Error de conexión con el servidor")
+      throw NetworkErrorHandler.enhanceError(error)
     }
   }
 
-  // Método para cerrar sesión
-  logout(): void {
-    localStorage.removeItem("authToken")
-    localStorage.removeItem("isAuthenticated")
-    localStorage.removeItem("userInfo")
+  // Helpers para mostrar nombre/email en la UI sin ir al backend.
+  getUserName(): string {
+    return localStorage.getItem("userName") || "Usuario"
   }
 
-  // Método para verificar si el usuario está autenticado
-  isAuthenticated(): boolean {
-    const token = localStorage.getItem("authToken")
-    const isAuth = localStorage.getItem("isAuthenticated")
-    return !!(token && isAuth === "true")
+  getUserEmail(): string {
+    return localStorage.getItem("userEmail") || ""
   }
 
-  // Método para obtener el token
+  // Obtiene el token actual (si existe) desde localStorage.
   getToken(): string | null {
     return localStorage.getItem("authToken")
   }
 
-  // Método para obtener el nombre del usuario desde localStorage
-  getUserName(): string {
-    try {
-      const storedUserInfo = localStorage.getItem("userInfo")
-      if (storedUserInfo) {
-        const userInfo = JSON.parse(storedUserInfo)
-        return userInfo.nombre || "Usuario"
-      }
-      return "Usuario"
-    } catch {
-      return "Usuario"
-    }
+  // Comprobación rápida de sesión basada en presencia de token (no valida expiración).
+  isAuthenticated(): boolean {
+    return !!this.getToken()
+  }
+
+  // Limpia completamente la sesión local.
+  logout(): void {
+    localStorage.removeItem("authToken")
+    localStorage.removeItem("userName")
+    localStorage.removeItem("userEmail")
   }
 }
 
-// Exportar instancia única del servicio
+// Export de una instancia singleton para usar en la app.
 export const authService = new AuthService()
+
+// Reexport de tipos/errores para uso externo.
+export { ValidationException } from "../types/authTypes"
+export type { ValidationError } from "../types/authTypes"

@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { parqueaderoService, type Parqueadero } from "../services/parqueaderoService"
-import ConfirmationDialog from "./ConfirmationDialog" // Importa tu componente de diálogo personalizado
+import ConfirmationDialog from "./ConfirmationDialog" 
 
 interface ParqueaderoListProps {
   parqueaderos: Parqueadero[]
